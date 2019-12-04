@@ -6,8 +6,9 @@
 #define _SUB(left, right) CreateNode (SUB, "-", left, right)
 #define _MUL(left, right) CreateNode (MUL, "*", left, right)
 #define _DIV(left, right) CreateNode (DIV, "/", left, right)
-#define _VAR CreateNode (1)
-#define _NUM CreateNode (0)
+#define _VAR CreateNode (VAR, "x", nullptr, nullptr)
+#define _NUM(num) CreateNode (num)
+#define _SIN(left, right) CreateNode (SIN, "sin", left, right)
 #define cL CopyNode (node->left)
 #define cR CopyNode (node->right)
 #define dL DifNode (node->left)
@@ -22,7 +23,8 @@ enum {
     SUB,
     MUL,
     DIV,
-    VAR
+    VAR,
+    SIN
 };
 const char* s = "";
 const int DataSize = 100;
@@ -62,6 +64,8 @@ void SaveTree (Node* node, int RootType, FILE* f_sav);
 void TreeToLaTex (Node* root, Node* d_root, FILE* f_tex);
 void Simplification (Node* root);
 void CopyTo (Node* root, Node* NewNode);
+
+
 
 Node* operator+ (Node a, Node b) {
     return CreateNode (SUM, "+", (&(a)), (&(b)));
@@ -134,7 +138,7 @@ Node* GetP () {
     }
     else if (*s == 'x') {
         s++;
-        return CreateNode (VAR, "x", nullptr, nullptr);
+        return _VAR;
     }
     else if ('0' <= *s && *s <= '9')
         return GetN ();
@@ -144,6 +148,9 @@ Node* GetP () {
 
 Node* GetF () {
     Node* val = nullptr;
+    if (strncmp (s, "sin(", 4) == 0) {
+
+    }
 //functions
 
     return val;
@@ -156,7 +163,7 @@ Node* GetN () {
 
     sscanf (s, "%lf%n", &val, &n);
     s += n;
-    res = CreateNode (val);
+    res = _NUM (val);
     return res;
 }
 
@@ -191,21 +198,21 @@ void Simplification (Node* root) {
         if (_L->type == NUM && _R->type == NUM) {
             switch (root->type) {
                 case SUM:
-                    NewNode = CreateNode(_L->num + _R->num);
+                    NewNode = _NUM (_L->num + _R->num);
                     CopyTo (root, NewNode);
                     break;
                 case SUB:
-                    NewNode = CreateNode (_L->num - _R->num);
+                    NewNode = _NUM (_L->num - _R->num);
                     CopyTo (root, NewNode);
                     break;
                 case MUL:
-                    NewNode = CreateNode (_L->num * _R->num);
+                    NewNode = _NUM (_L->num * _R->num);
                     CopyTo (root, NewNode);
                     break;
                 case DIV:
                     if (_R->num) {
-                        NewNode = CreateNode(_L->num / _R->num);
-                        CopyTo(root, NewNode);
+                        NewNode = _NUM (_L->num / _R->num);
+                        CopyTo (root, NewNode);
                     }
                     break;
             }
@@ -213,7 +220,7 @@ void Simplification (Node* root) {
 
         if (root->type == MUL) {
             if ((_L->type == NUM && _L->num == 0) || (_R->type == NUM && _R->num == 0)) {
-                NewNode = CreateNode (0);
+                NewNode = _NUM (0);
                 CopyTo (root, NewNode);
             }
             else if (_L->type == NUM && _L->num == 1) {
@@ -248,9 +255,9 @@ void CopyTo (Node* root, Node* NewNode) {
 Node* DifNode (const Node* node) {
         switch (node->type) {
             case NUM:
-                return _NUM;
+                return _NUM (0);
             case VAR:
-                return _VAR;
+                return _NUM (1);
             case SUM:
                 return _SUM (dL, dR);
             case SUB:
@@ -266,9 +273,9 @@ Node* CopyNode (Node* root) {
 
     switch (root->type) {
         case NUM:
-            return CreateNode (root->num);
+            return _NUM (root->num);
         case VAR:
-            return CreateNode (VAR, "x", nullptr, nullptr);
+            return _VAR;
         case MUL:
             return _MUL (_L, _R);
         case DIV:
