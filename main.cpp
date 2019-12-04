@@ -50,7 +50,7 @@ Node* GetN ();
 
 Node* CreateNode (int type, char* data, Node* left, Node* right);
 Node* CreateNode (double num);
-Node* CopyNode (Node* node);
+Node* CopyNode (Node* root);
 Node* DifNode (const Node* node);
 Node* DelNode (Node* node);
 void DeleteTree (Node* root);
@@ -69,7 +69,8 @@ Node* operator+ (Node a, Node b) {
 
 int main () {
     FILE* f_out = fopen ("F:\\Graphs\\output.dot", "w");
-    Node* root = GetG ("x*x*x-17+3*(x+9*x*x)");
+    Node* root = GetG ("2*x-13*x*14*x-5+4/15");
+    Simplification (root);
     Node* d_root = DifNode (root);
     Simplification (d_root);
     TreePrint (d_root, f_out);
@@ -77,7 +78,7 @@ int main () {
     FILE* f_tex = fopen ("F:\\LaTex\\output.tex", "w");
     assert (f_tex);
 
-    TreeToLaTex(root, d_root, f_tex);
+    TreeToLaTex (root, d_root, f_tex);
     return 0;
 }
 
@@ -201,6 +202,12 @@ void Simplification (Node* root) {
                     NewNode = CreateNode (_L->num * _R->num);
                     CopyTo (root, NewNode);
                     break;
+                case DIV:
+                    if (_R->num) {
+                        NewNode = CreateNode(_L->num / _R->num);
+                        CopyTo(root, NewNode);
+                    }
+                    break;
             }
         }
 
@@ -217,7 +224,7 @@ void Simplification (Node* root) {
             }
         }
 
-        if (root->type == SUM) {
+        if (root->type == SUM || root->type == SUB) {
             if (_L->type == NUM && _L->num == 0) {
                 CopyTo (root, _R);
             }
@@ -250,25 +257,26 @@ Node* DifNode (const Node* node) {
                 return _SUB (dL, dR);
             case MUL:
                 return _SUM (_MUL(dL, cR), _MUL(cL, dR));
-
+            case DIV:
+                return _DIV (_SUB (_MUL (dL, cR), _MUL (cL, dR)), _MUL (cR, cR));
         }
 }
 
-Node* CopyNode (Node* node) {
+Node* CopyNode (Node* root) {
 
-    switch (node->type) {
+    switch (root->type) {
         case NUM:
-            return CreateNode (node->num);
+            return CreateNode (root->num);
         case VAR:
             return CreateNode (VAR, "x", nullptr, nullptr);
         case MUL:
-            return _MUL(node->left, node->right);
+            return _MUL (_L, _R);
         case DIV:
-            return _DIV(node->left, node->right);
+            return _DIV (_L, _R);
         case SUM:
-            return _SUM(node->left, node->right);
+            return _SUM (_L, _R);
         case SUB:
-            return _SUB(node->left, node->right);
+            return _SUB (_L, _R);
         default:
             return nullptr;
     }
@@ -301,8 +309,8 @@ Node* GetTreeFromFile (Node* root, FILE* f_in) {
 void DeleteTree (Node* root) {
 
     if (root) {
-        DeleteTree (root->left);
-        DeleteTree (root->right);
+        DeleteTree (_L);
+        DeleteTree (_R);
         DelNode (root);
     }
 }
