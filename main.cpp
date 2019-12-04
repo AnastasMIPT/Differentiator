@@ -12,6 +12,8 @@
 #define cR CopyNode (node->right)
 #define dL DifNode (node->left)
 #define dR DifNode (node->right)
+#define _L root->left
+#define _R root->right
 
 
 enum {
@@ -58,12 +60,19 @@ void NodePrint (Node* node, FILE* f_out);
 void TreePrint (Node* root, FILE* f_out);
 void SaveTree (Node* node, int RootType, FILE* f_sav);
 void TreeToLaTex (Node* root, Node* d_root, FILE* f_tex);
+void Simplification (Node* root);
+void CopyTo (Node* root, Node* NewNode);
+
+Node* operator+ (Node a, Node b) {
+    return CreateNode (SUM, "+", (&(a)), (&(b)));
+}
 
 int main () {
     FILE* f_out = fopen ("F:\\Graphs\\output.dot", "w");
-    Node* root = GetG ("x*x+8*(x-6*(x+x*4))");
+    Node* root = GetG ("x*x*x-17+3*(x+9*x*x)");
     Node* d_root = DifNode (root);
-    TreePrint (root, f_out);
+    Simplification (d_root);
+    TreePrint (d_root, f_out);
 
     FILE* f_tex = fopen ("F:\\LaTex\\output.tex", "w");
     assert (f_tex);
@@ -112,6 +121,7 @@ Node* GetT () {
     }
     return val;
 }
+
 Node* GetP () {
     Node* val = nullptr;
     if (*s == '(') {
@@ -171,21 +181,79 @@ Node* CreateNode (double num) {
     return node;
 }
 
-Node* DifNode (const Node* node) {
-    switch (node->type) {
-        case NUM:
-            return _NUM;
-        case VAR:
-            return _VAR;
-        case SUM:
-            return _SUM (dL, dR);
-        case SUB:
-            return _SUB (dL, dR);
-        case MUL:
-            return _SUM (_MUL (dL, cR), _MUL (cL, dR));
+void Simplification (Node* root) {
 
+    if (_L && _R) {
+        Simplification(_L);
+        Simplification(_R);
+        Node* NewNode = nullptr;
+        if (_L->type == NUM && _R->type == NUM) {
+            switch (root->type) {
+                case SUM:
+                    NewNode = CreateNode(_L->num + _R->num);
+                    CopyTo (root, NewNode);
+                    break;
+                case SUB:
+                    NewNode = CreateNode (_L->num - _R->num);
+                    CopyTo (root, NewNode);
+                    break;
+                case MUL:
+                    NewNode = CreateNode (_L->num * _R->num);
+                    CopyTo (root, NewNode);
+                    break;
+            }
+        }
+
+        if (root->type == MUL) {
+            if ((_L->type == NUM && _L->num == 0) || (_R->type == NUM && _R->num == 0)) {
+                NewNode = CreateNode (0);
+                CopyTo (root, NewNode);
+            }
+            else if (_L->type == NUM && _L->num == 1) {
+                CopyTo (root, _R);
+            }
+            else if (_R->type == NUM && _R->num == 1) {
+                CopyTo (root, _L);
+            }
+        }
+
+        if (root->type == SUM) {
+            if (_L->type == NUM && _L->num == 0) {
+                CopyTo (root, _R);
+            }
+            else if (_R->type == NUM && _R->num == 0) {
+                CopyTo (root, _L);
+            }
+        }
+
+        free (NewNode);
     }
 }
+
+void CopyTo (Node* root, Node* NewNode) {
+    root->left = NewNode->left;
+    root->right = NewNode->right;
+    root->num = NewNode->num;
+    root->type = NewNode->type;
+    root->data = NewNode->data;
+}
+
+Node* DifNode (const Node* node) {
+        switch (node->type) {
+            case NUM:
+                return _NUM;
+            case VAR:
+                return _VAR;
+            case SUM:
+                return _SUM (dL, dR);
+            case SUB:
+                return _SUB (dL, dR);
+            case MUL:
+                return _SUM (_MUL(dL, cR), _MUL(cL, dR));
+
+        }
+}
+
 Node* CopyNode (Node* node) {
 
     switch (node->type) {
@@ -205,6 +273,7 @@ Node* CopyNode (Node* node) {
             return nullptr;
     }
 }
+
 Node* DelNode (Node* node) {
     free (node->data);
     free (node->left);
@@ -281,19 +350,16 @@ void TreeToLaTex (Node* root, Node* d_root, FILE* f_tex) {
 
 void SaveTree (Node* node, int RootType, FILE* f_sav) {
     if (node) {
-        //if (node->type != NUM && node->type != VAR && node->type != MUL && !(node->type == SUM && RootType == MUL))
-       // if (root->type == MUL && (root->left->type == SUM ||root->left->type == SUB || root->right->type == SUM || root->right->type == SUB))
         if ((node->type == SUM || node->type == SUB) && RootType == MUL)
             fprintf(f_sav, "(");
         SaveTree(node->left, node->type, f_sav);
+
         if (node->type == NUM)
             fprintf(f_sav, "%.2lf", node->num);
         else
             fprintf(f_sav, "%s", node->data);
 
         SaveTree(node->right, node->type, f_sav);
-        //if (node->type != NUM && node->type != VAR && node->type != MUL && !(node->type == SUM && RootType == MUL))
-        //if (root->type == MUL && (root->left->type == SUM ||root->left->type == SUB || root->right->type == SUM || root->right->type == SUB))
         if ((node->type == SUM || node->type == SUB) && RootType == MUL)
             fprintf(f_sav, ")");
     }
