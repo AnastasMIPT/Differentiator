@@ -73,11 +73,11 @@ Node* GetN ();
 
 
 
-Node* CreateNode (int type, char* data, Node* left, Node* right);
+Node* CreateNode (int type, const char* data, Node* left, Node* right);
 Node* CreateNode (double num);
 Node* CopyNode (Node* root);
 Node* DifNode (const Node* node);
-Node* DelNode (Node* node);
+void DelNode (Node* node);
 void DeleteTree (Node* root);
 void PrintNods (Node* node, FILE* f_out);
 void NodePrint (Node* node, FILE* f_out);
@@ -86,7 +86,7 @@ void SaveTree (Node* node, int RootType, FILE* f_sav);
 void TreeToLaTex (Node* root, Node* d_root, FILE* f_tex);
 void Simplification (Node* root);
 void CopyTo (Node* root, Node* NewNode);
-
+Node* NDifNode (Node* root, int number);
 
 
 Node* operator+ (Node a, Node b) {
@@ -96,9 +96,9 @@ Node* operator+ (Node a, Node b) {
 int main () {
     FILE* f_out = fopen ("F:\\Graphs\\output.dot", "w");
     //Node* root = GetG ("x^2+4.5*x-tg(x)");
-    Node* root = GetG ("cth(x^2)");
+    Node* root = GetG ("sin(x)");
     Simplification (root);
-    Node* d_root = DifNode (root);
+    Node* d_root = NDifNode (root, 0);
     Simplification (d_root);
     TreePrint (root, f_out);
 
@@ -261,7 +261,7 @@ Node* GetN () {
     return res;
 }
 
-Node* CreateNode (int type, char* data, Node* left, Node* right) {
+Node* CreateNode (int type, const char* data, Node* left, Node* right) {
 
     Node* node  = (Node*) calloc (1, sizeof (Node));
     node->data  = (char*) calloc (1, sizeof (double));
@@ -364,6 +364,17 @@ void CopyTo (Node* root, Node* NewNode) {
     root->data = NewNode->data;
 }
 
+Node* NDifNode (Node* root, int number) {
+
+    Node* d_root = root;
+
+    for (int i = 0; i < number; i++) {
+        d_root = DifNode (d_root);
+    }
+
+    return d_root;
+}
+
 Node* DifNode (const Node* node) {
         switch (node->type) {
             case NUM:
@@ -400,7 +411,10 @@ Node* DifNode (const Node* node) {
                 return _MUL (_DIV (_NUM (1), _MUL (_CH (cR), _CH (cR))), dR);
             case CTH:
                 return _MUL (_DIV (_NUM (-1), _MUL (_SH (cR), _SH (cR))), dR);
+
+
         }
+    return nullptr;
 }
 
 Node* CopyNode (Node* root) {
@@ -445,9 +459,10 @@ if (root) {
             return nullptr;
     }
 }
+    return nullptr;
 }
 
-Node* DelNode (Node* node) {
+void DelNode (Node* node) {
     free (node->data);
     free (node->left);
     free (node->right);
