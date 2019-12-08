@@ -35,6 +35,7 @@ enum {
     MUL,
     POW,
     DIV,
+    FUNCCOL,
     VAR,
     SIN,
     COS,
@@ -88,7 +89,7 @@ void Simplification (Node* root);
 void CopyTo (Node* root, Node* NewNode);
 Node* NDifNode (Node* root, int number);
 void VarToNum (Node* root, double num);
-void MaklorenElement (Node* root, int num, FILE* f_out);
+bool MaklorenElement (Node* root, int num, FILE* f_out);
 void MaklorenSeries (Node* root, int num, FILE* f_out);
 
 Node* operator+ (Node a, Node b) {
@@ -98,7 +99,7 @@ Node* operator+ (Node a, Node b) {
 int main () {
     FILE* f_out = fopen ("F:\\Graphs\\output.dot", "w");
     //Node* root = GetG ("tg(x)^10");
-    Node* root = GetG ("1/tg(x)");
+    Node* root = GetG ("ln(1+x)");
 
     //VarToNum (root, 0);
     Simplification (root);
@@ -320,85 +321,102 @@ void Simplification (Node* root) {
                 }
             }
 
-            if (root->type == MUL) {
-                if ((_L->type == NUM && _L->num == 0) || (_R->type == NUM && _R->num == 0)) {
-                    NewNode = _NUM (0);
-                    CopyTo(root, NewNode);
-                } else if (_L->type == NUM && _L->num == 1) {
-                    CopyTo(root, _R);
-                } else if (_R->type == NUM && _R->num == 1) {
-                    CopyTo(root, _L);
-                } else if (_L->type == _R->type && _L->type == VAR) {
-                    NewNode = _POW (_L, _NUM(2));
-                    CopyTo(root, NewNode);
-                }
+            switch (root->type) {
+                case MUL:
+                    if ((_L->type == NUM && _L->num == 0) || (_R->type == NUM && _R->num == 0)) {
+                        NewNode = _NUM (0);
+                        CopyTo (root, NewNode);
+                    } else if  (_L->type == NUM && _L->num == 1) {
+                        CopyTo (root, _R);
+                    } else if (_R->type == NUM && _R->num == 1) {
+                        CopyTo (root, _L);
+                    } else if (_L->type == _R->type && _L->type == VAR) {
+                        NewNode = _POW (_L, _NUM(2));
+                        CopyTo (root, NewNode);
+                    }
+                    break;
+                case DIV:
+                    if (_L->type == NUM && _L->num == 0) {
+                        NewNode = _NUM (0);
+                        CopyTo (root, NewNode);
+                    } else if (_R->type == NUM && _R->num == 1) {
+                        CopyTo (root, _L);
+                    }
+                    break;
+                case SUM:
+                    if (_L->type == NUM && _L->num == 0) {
+                        CopyTo (root, _R);
+                    } else if (_R->type == NUM && _R->num == 0) {
+                        CopyTo (root, _L);
+                    }
+                    break;
+                case SUB:
+                    if (_L->type == NUM && _L->num == 0) {
+                        NewNode = _MUL (_NUM (-1), _R);
+                        CopyTo (root, NewNode);
+                    } else if (_R->type == NUM && _R->num == 0) {
+                        CopyTo (root, _L);
+                    }
+                    break;
+                case POW:
+                    if (_R->type == NUM && _R->num == 0) {
+                        NewNode = _NUM (1);
+                        CopyTo (root, NewNode);
+                    } else if (_L->type == NUM && _L->num == 1) {
+                        NewNode = _NUM (1);
+                        CopyTo (root, NewNode);
+                    } else if (_R->type == NUM && _R->num == 1) {
+                        CopyTo (root, _L);
+                    } else if (_L->type == POW) {
+                        NewNode = _POW (_L->left, _NUM(_L->right->num * _R->num));
+                        CopyTo (root, NewNode);
+                    }
+                    break;
             }
 
-            if (root->type == SUM || root->type == SUB) {
-                if (_L->type == NUM && _L->num == 0) {
-                    CopyTo(root, _R);
-                } else if (_R->type == NUM && _R->num == 0) {
-                    CopyTo(root, _L);
-                }
-            }
-
-            if (root->type == POW) {
-                if (_R->type == NUM && _R->num == 0) {
-                    NewNode = _NUM (1);
-                    CopyTo(root, NewNode);
-                } else if (_L->type == NUM && _L->num == 1) {
-                    NewNode = _NUM (1);
-                    CopyTo(root, NewNode);
-                } else if (_R->type == NUM && _R->num == 1) {
-                    CopyTo(root, _L);
-                } else if (_L->type == POW) {
-                    NewNode = _POW (_L->left, _NUM (_L->right->num * _R->num));
-                    CopyTo (root, NewNode);
-                }
-                }
 
             } else if (_R && _R->type == NUM) {
                 switch (root->type) {
                     case SIN:
                         NewNode = _NUM (sin(_R->num));
-                        CopyTo(root, NewNode);
+                        CopyTo (root, NewNode);
                         break;
                     case COS:
                         NewNode = _NUM (cos(_R->num));
-                        CopyTo(root, NewNode);
+                        CopyTo (root, NewNode);
                         break;
                     case TG:
                         NewNode = _NUM (tan(_R->num));
-                        CopyTo(root, NewNode);
+                        CopyTo (root, NewNode);
                         break;
                     case CTG:
                         NewNode = _NUM (1 / tan(_R->num));
-                        CopyTo(root, NewNode);
+                        CopyTo (root, NewNode);
                         break;
                     case SH:
                         NewNode = _NUM (sinh(_R->num));
-                        CopyTo(root, NewNode);
+                        CopyTo (root, NewNode);
                         break;
                     case CH:
                         NewNode = _NUM (cosh(_R->num));
-                        CopyTo(root, NewNode);
+                        CopyTo (root, NewNode);
                         break;
                     case TH:
                         NewNode = _NUM (tanh(_R->num));
-                        CopyTo(root, NewNode);
+                        CopyTo (root, NewNode);
                         break;
                     case CTH:
                         NewNode = _NUM (1 / tanh(_R->num));
-                        CopyTo(root, NewNode);
+                        CopyTo (root, NewNode);
                         break;
                     case ARCTG:
-                        NewNode = _NUM (atan (_R->num));
-                        CopyTo(root, NewNode);
+                        NewNode = _NUM (atan(_R->num));
+                        CopyTo (root, NewNode);
                         break;
                 }
             }
 
-            if (NewNode) free (NewNode);
+            //if (NewNode) free (NewNode);
         }
 
     }
@@ -423,14 +441,20 @@ void VarToNum (Node* root, double num) {
     }
 }
 
-void MaklorenElement (Node* root, int num, FILE* f_out) {
+bool MaklorenElement (Node* root, int num, FILE* f_out) {
 
     Node* root_copy = CopyNode (root);
     if (num != 0) {
-        fprintf(f_out, "\\frac {");
         Node* d_root = NDifNode (root_copy, num);
         VarToNum (d_root, 0);
         Simplification (d_root);
+
+        if (d_root->type == NUM && d_root->num == 0) {
+            DeleteTree (root_copy);
+            DeleteTree (d_root);
+            return false;
+        }
+        fprintf(f_out, "\\frac {");
         SaveTree (d_root, 0, f_out);
         fprintf (f_out, " \\cdot x^{%d}} {%d!} ", num, num);
         DeleteTree (d_root);
@@ -439,10 +463,18 @@ void MaklorenElement (Node* root, int num, FILE* f_out) {
     {
         VarToNum (root_copy, 0);
         Simplification (root_copy);
-        fprintf (f_out, "%.2lf", root_copy->num);
+
+        if (root_copy->num == 0) {
+            DeleteTree (root_copy);
+            return false;
+        }
+        if (abs (root_copy->num  - (int) root_copy->num) < 0.00001)
+            fprintf (f_out, "%d", (int) root_copy->num);
+        else
+            fprintf (f_out, "%.2lf", root_copy->num);
     }
     DeleteTree (root_copy);
-
+    return true;
 }
 
 void MaklorenSeries (Node* root, int num, FILE* f_out) {
@@ -451,8 +483,8 @@ void MaklorenSeries (Node* root, int num, FILE* f_out) {
                     "f(x)=");
 
     for (int i = 0; i < num + 1; i++) {
-        MaklorenElement (root, i, f_out);
-        fprintf (f_out, "+");
+        if (MaklorenElement (root, i, f_out))
+            fprintf (f_out, "+");
     }
     fprintf (f_out, "o(x^{%d})\n", num);
     fprintf (f_out, "\\end{math}\n"
@@ -492,13 +524,13 @@ Node* DifNode (const Node* node) {
             case COS:
                 return _MUL (_NUM (-1), _MUL (_SIN (cR), dR));
             case TG:
-                return _DIV (dR, _MUL (_COS (cR), _COS (cR)));
+                return _DIV (dR, _POW (_COS (cR), _NUM (2)));
             case CTG:
-                return _DIV (_MUL (dR, _NUM (-1)), _MUL (_SIN (cR), _SIN (cR)));
+                return _DIV (_MUL (dR, _NUM (-1)), _POW (_SIN (cR), _NUM (2)));
             case LN:
                 return _DIV (dR, cR);
             case ARCTG:
-                return _DIV (dR, _SUM (_NUM(1), _MUL (cR, cR)));
+                return _DIV (dR, _SUM (_NUM(1), _POW (cR, _NUM (2))));
             case POW:
                 return _MUL (_MUL (cR, _POW (cL, _SUB (cR, _NUM (1)))), dL);
             case SH:
@@ -506,9 +538,9 @@ Node* DifNode (const Node* node) {
             case CH:
                 return _MUL (_SH (cR), dR);
             case TH:
-                return _DIV (dR, _MUL (_CH (cR), _CH (cR)));
+                return _DIV (dR, _POW (_CH (cR), _NUM (2)));
             case CTH:
-                return _DIV (_MUL (dR, _NUM (-1)), _MUL (_SH (cR), _SH (cR)));
+                return _DIV (_MUL (dR, _NUM (-1)), _POW (_SH (cR), _NUM (2)));
 
 
         }
@@ -618,7 +650,8 @@ void TreeToLaTex (Node* root, Node* d_root, FILE* f_tex) {
 void SaveTree (Node* node, int RootType, FILE* f_sav) {
     if (node) {
         if (((node->type == SUM || node->type == SUB) && (RootType == MUL  || RootType == POW) )
-            || RootType > 6
+            || RootType > FUNCCOL
+            || (RootType == POW && node->type > FUNCCOL)
             ||  ((node->type == MUL || node->type == DIV) && RootType == POW)) {
             fprintf (f_sav, "(");
         }
@@ -627,14 +660,14 @@ void SaveTree (Node* node, int RootType, FILE* f_sav) {
             fprintf (f_sav, "\\frac {");
         }
 
-        SaveTree(node->left, node->type, f_sav);
+        SaveTree (node->left, node->type, f_sav);
 
         if (node->type == DIV) {
             fprintf (f_sav, "}");
         }
 
 
-        if (node->type != DIV) {
+        if (node->type != DIV ) {
             switch (node->type) {
                 case NUM:
                     if (abs (node->num  - (int) node->num) < 0.00001)
@@ -649,18 +682,21 @@ void SaveTree (Node* node, int RootType, FILE* f_sav) {
                     fprintf(f_sav, "%s", node->data);
             }
         }
+
+
         if (node->type == DIV || node->type == POW) {
             fprintf (f_sav, "{");
         }
 
-        SaveTree(node->right, node->type, f_sav);
+        SaveTree (node->right, node->type, f_sav);
 
         if (node->type == DIV || node->type == POW) {
             fprintf (f_sav, "}");
         }
 
         if (((node->type == SUM || node->type == SUB) && (RootType == MUL  || RootType == POW) )
-            || RootType > VAR
+            || RootType > FUNCCOL
+            || (RootType == POW && node->type > FUNCCOL)
             ||  ((node->type == MUL || node->type == DIV) && RootType == POW)) {
             fprintf (f_sav, ")");
         }
