@@ -35,8 +35,8 @@ enum {
     MUL,
     POW,
     DIV,
-    FUNCCOL,
     VAR,
+    FUNCCOL,
     SIN,
     COS,
     TG,
@@ -50,9 +50,6 @@ enum {
     CTH
 };
 const char* s = "";
-const int DataSize = 100;
-const int Question = 1;
-const int Object = 2;
 
 struct Node
 {
@@ -99,7 +96,7 @@ Node* operator+ (Node a, Node b) {
 int main () {
     FILE* f_out = fopen ("F:\\Graphs\\output.dot", "w");
     //Node* root = GetG ("tg(x)^10");
-    Node* root = GetG ("cos(x)*ln(1+x)");
+    Node* root = GetG ("sin(cos(sin(x^3)))");
 
     //VarToNum (root, 0);
     Simplification (root);
@@ -375,8 +372,6 @@ void Simplification (Node* root) {
                     }
                     break;
             }
-
-
             } else if (_R) {
             Simplification(_R);
             if ( _R->type == NUM) {
@@ -618,13 +613,11 @@ void DeleteTree (Node* root) {
 
 void TreeToLaTex (Node* root, Node* d_root, FILE* f_tex) {
     fprintf (f_tex, "\\documentclass[a4paper,12pt]{article}\n"
-                    "\n"
                     "\\usepackage[T2A]{fontenc}\n"
                     "\\usepackage[utf8]{inputenc}\n"
                     "\\usepackage[english,russian]{babel}\n"
                     "\n"
                     "\\usepackage{amsmath,amsfonts,amssymb,amsthm,mathtools} \n"
-                    "\n"
                     "\n"
                     "\\usepackage{wasysym}\n"
                     "\n"
@@ -632,27 +625,38 @@ void TreeToLaTex (Node* root, Node* d_root, FILE* f_tex) {
                     "\\title{Небольшой пример взятия производной}\n"
                     "\\date{\\today}\n"
                     "\n"
-                    "\n"
                     "\\begin{document}\n"
                     "\n"
                     "\\maketitle\n"
-                    "\\newpage\n"
                     "\\subsection{Решим простой пример}\n"
                     "\n"
                     "{\\Large Найти производную функции \\\\ $f(x)=");
-    SaveTree(root, 0, f_tex);
+    SaveTree (root, 0, f_tex);
     fprintf (f_tex, "$:\n"
                     "\\begin{center}\n"
                     "\\begin{math}\n"
                     "f^\\prime(x)=");
-    SaveTree(d_root, 0, f_tex);
+    SaveTree (d_root, 0, f_tex);
     fprintf (f_tex,"\n"
                    "\\end{math}\n"
                    "\\end{center}\n"
                    "}\n");
+    fprintf (f_tex, "{\\Large Разложим по формуле Маклорена:}\n");
     MaklorenSeries (root, 5, f_tex);
-    fprintf (f_tex, "\\end{document}");
+    fprintf (f_tex, "\\section {Найдем 5 производную от функции из предыдущего примера.}\n"
+                    "{\\Large После небольшого количества несложных преобразований получим:\n"
+                    "\\begin{center}\n"
+                    "\\begin{math}\n"
+                    "f^\\prime(x)=");
+    Node* dd_root = NDifNode (root, 5);
+    SaveTree (dd_root, 0, f_tex);
+    fprintf (f_tex, "\n"
+                    "\\end{math}\n"
+                    "\\end{center}\n"
+                    "}\n"
+                    "\\end{document}");
 
+    DeleteTree (dd_root);
     fclose (f_tex);
 }
 
@@ -752,6 +756,4 @@ void PrintNods (Node* node, FILE* f_out) {
 
         if (node->right != nullptr) PrintNods (node->right, f_out);
         if (node->left != nullptr) PrintNods (node->left,  f_out);
-
-
 }
