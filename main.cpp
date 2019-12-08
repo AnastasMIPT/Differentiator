@@ -99,12 +99,14 @@ Node* operator+ (Node a, Node b) {
 int main () {
     FILE* f_out = fopen ("F:\\Graphs\\output.dot", "w");
     //Node* root = GetG ("tg(x)^10");
-    Node* root = GetG ("ln(1+x)");
+    Node* root = GetG ("cos(x)*ln(1+x)");
 
     //VarToNum (root, 0);
     Simplification (root);
     Node* d_root = NDifNode (root, 1);
     Simplification (d_root);
+    //VarToNum (root, 2.4);
+    //Simplification (root);
     TreePrint (d_root, f_out);
 
     FILE* f_tex = fopen ("F:\\LaTex\\output.tex", "w");
@@ -330,7 +332,7 @@ void Simplification (Node* root) {
                         CopyTo (root, _R);
                     } else if (_R->type == NUM && _R->num == 1) {
                         CopyTo (root, _L);
-                    } else if (_L->type == _R->type && _L->type == VAR) {
+                    } else if (_L->type == _R->type && (_L->type == VAR || _L->type > FUNCCOL)) {
                         NewNode = _POW (_L, _NUM(2));
                         CopyTo (root, NewNode);
                     }
@@ -375,45 +377,52 @@ void Simplification (Node* root) {
             }
 
 
-            } else if (_R && _R->type == NUM) {
+            } else if (_R) {
+            Simplification(_R);
+            if ( _R->type == NUM) {
                 switch (root->type) {
                     case SIN:
                         NewNode = _NUM (sin(_R->num));
-                        CopyTo (root, NewNode);
+                        CopyTo(root, NewNode);
                         break;
                     case COS:
                         NewNode = _NUM (cos(_R->num));
-                        CopyTo (root, NewNode);
+                        CopyTo(root, NewNode);
                         break;
                     case TG:
                         NewNode = _NUM (tan(_R->num));
-                        CopyTo (root, NewNode);
+                        CopyTo(root, NewNode);
                         break;
                     case CTG:
                         NewNode = _NUM (1 / tan(_R->num));
-                        CopyTo (root, NewNode);
+                        CopyTo(root, NewNode);
                         break;
                     case SH:
                         NewNode = _NUM (sinh(_R->num));
-                        CopyTo (root, NewNode);
+                        CopyTo(root, NewNode);
                         break;
                     case CH:
                         NewNode = _NUM (cosh(_R->num));
-                        CopyTo (root, NewNode);
+                        CopyTo(root, NewNode);
                         break;
                     case TH:
                         NewNode = _NUM (tanh(_R->num));
-                        CopyTo (root, NewNode);
+                        CopyTo(root, NewNode);
                         break;
                     case CTH:
                         NewNode = _NUM (1 / tanh(_R->num));
-                        CopyTo (root, NewNode);
+                        CopyTo(root, NewNode);
                         break;
                     case ARCTG:
                         NewNode = _NUM (atan(_R->num));
-                        CopyTo (root, NewNode);
+                        CopyTo(root, NewNode);
+                        break;
+                    case LN:
+                        NewNode = _NUM (log(_R->num));
+                        CopyTo(root, NewNode);
                         break;
                 }
+            }
             }
 
             //if (NewNode) free (NewNode);
@@ -652,7 +661,8 @@ void SaveTree (Node* node, int RootType, FILE* f_sav) {
         if (((node->type == SUM || node->type == SUB) && (RootType == MUL  || RootType == POW) )
             || RootType > FUNCCOL
             || (RootType == POW && node->type > FUNCCOL)
-            ||  ((node->type == MUL || node->type == DIV) && RootType == POW)) {
+            || ((node->type == MUL || node->type == DIV) && RootType == POW)
+            || (node->type == NUM && node->num < 0)) {
             fprintf (f_sav, "(");
         }
 
@@ -697,7 +707,8 @@ void SaveTree (Node* node, int RootType, FILE* f_sav) {
         if (((node->type == SUM || node->type == SUB) && (RootType == MUL  || RootType == POW) )
             || RootType > FUNCCOL
             || (RootType == POW && node->type > FUNCCOL)
-            ||  ((node->type == MUL || node->type == DIV) && RootType == POW)) {
+            || ((node->type == MUL || node->type == DIV) && RootType == POW)
+            || (node->type == NUM && node->num < 0)) {
             fprintf (f_sav, ")");
         }
 
